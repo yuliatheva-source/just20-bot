@@ -627,15 +627,15 @@ def main():
 
     # Команды
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("день", cmd_day))
+    # Russian commands removed
     app.add_handler(CommandHandler("den", cmd_day))
-    app.add_handler(CommandHandler("готово", cmd_done))
+    # Russian commands removed
     app.add_handler(CommandHandler("gotovo", cmd_done))
-    app.add_handler(CommandHandler("меню", cmd_menu))
+    # Russian commands removed
     app.add_handler(CommandHandler("menu", cmd_menu))
-    app.add_handler(CommandHandler("прогресс", cmd_progress))
+    # Russian commands removed
     app.add_handler(CommandHandler("progress", cmd_progress))
-    app.add_handler(CommandHandler("помощь", cmd_help))
+    # Russian commands removed
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("activate", cmd_admin_activate))
     app.add_handler(CommandHandler("stats", cmd_admin_stats))
@@ -658,3 +658,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
