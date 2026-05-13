@@ -1,8 +1,3 @@
-bash
-
-cat /home/claude/just20_bot.py
-Output
-
 """
 Just20 Telegram Bot — Полная версия
 Рита говорит от первого лица
