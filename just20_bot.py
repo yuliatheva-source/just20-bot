@@ -120,16 +120,27 @@ MSG_NOT_PAID = """Привет! Это Рита 🌸
 
 Я сразу всё открою! 💕"""
 
-MSG_ACCESS_GRANTED = """🎉 Рита здесь! Ты теперь в программе Just20! 🌸
+MSG_ACCESS_GRANTED = """🎉 Добро пожаловать в Just20! Это Рита! 🌸
 
-Вот что тебя ждёт каждый день:
-🌅 В 9:00 — задание и меню на день
-☀️ В 13:00 — напоминание об обеде
-🌙 В 19:00 — напоминание об ужине
+Я так рада что ты здесь — ты приняла одно из лучших решений для себя.
 
-Каждое утро я буду рядом — как подруга которая верит в тебя!
+Этот чат создан специально для таких женщин как ты — занятых, с семьёй, с работой, с реальной жизнью где времени всегда не хватает.
 
-Готова начать? 👇"""
+Just20 — это не ещё одна жёсткая программа. Это твой личный помощник который каждый день будет рядом:
+
+🌅 *В 9:00 утра* я пришлю тебе задание дня — занятие всего 15–20 минут дома без оборудования
+
+🍳 *Завтрак, перекус, обед и ужин* — каждый день готовое меню из простых продуктов. Не нужно думать что приготовить
+
+💪 *Упражнения* специально подобраны для твоего тела — живот, бёдра, руки, спина
+
+✅ *Чек-ины* 3 раза в день — я буду спрашивать как ты, отмечать твой прогресс и поддерживать
+
+📊 *Прогресс* — ты будешь видеть каждый пройденный день и гордиться собой
+
+Используй кнопки ниже — они всегда здесь для тебя. Я никуда не ухожу! 💕
+
+Готова начать свой День 1? 👇"""
 
 # ══════════════════════════════════════════
 # ДАННЫЕ ПО ДНЯМ
@@ -312,26 +323,60 @@ async def process_done(update, context):
     user_id = update.effective_user.id
     user = get_user(user_id)
     if not user or not user.get("active"):
+        if update.message:
+            await update.message.reply_text(MSG_NOT_PAID, reply_markup=payment_keyboard())
+        elif update.callback_query:
+            await update.callback_query.message.reply_text(MSG_NOT_PAID, reply_markup=payment_keyboard())
         return
+
     current_day = user.get("current_day", 1)
+    days_done = current_day
+    days_left = max(0, 21 - days_done)
+    pct = min(100, int((days_done / 21) * 100))
+    filled = int(pct / 10)
+    bar = "🟣" * filled + "⬜" * (10 - filled)
+
     import random
-    responses = [
-        "Умница! Я так тобой горжусь! 🎉🌸",
-        "Вот это да! Ты сделала это! 💪🌸",
-        "Браво! Каждый день ты становишься лучше! ✨🌸",
-        "Это восхитительно! Так держать! 🔥🌸",
-        "Ты — сила! Завтра продолжаем! 💕🌸",
+    celebrations = [
+        "ВОТ ЭТО ДА! 🎉🎉🎉",
+        "УМНИЦА! Я в восторге! 🌟🌟🌟",
+        "ТЫ — ЗВЕЗДА! ⭐⭐⭐",
+        "НЕВЕРОЯТНО! Я так тобой горжусь! 🔥🔥🔥",
+        "БРАВО! Это просто потрясающе! 💫💫💫",
     ]
+    
+    messages = [
+        f"Ты только что сделала что-то важное для себя — и это считается! 💪",
+        f"Знаешь что самое крутое? Ты не остановилась. Вот это сила! 🌸",
+        f"Твоё тело говорит тебе спасибо прямо сейчас! ✨",
+        f"Каждое занятие — это инвестиция в себя. И ты только что вложила в себя! 💕",
+        f"Я так рада быть рядом с тобой в этом пути! 🌸",
+    ]
+
     user["current_day"] = current_day + 1
     user["last_morning"] = datetime.now(MOSCOW_TZ).date().isoformat()
     save_user(user_id, user)
-    msg = update.message if update.message else update.callback_query.message
-    await msg.reply_text(
-        f"{random.choice(responses)}\n\n"
-        f"День {current_day} ✅ выполнен!\n\n"
-        f"Завтра в 9:00 я пришлю тебе задание Дня {current_day + 1} 🌸",
-        reply_markup=main_keyboard()
-    )
+
+    if current_day >= 21:
+        text = (
+            f"🏆 ТЫ ПРОШЛА ВСЕ 21 ДЕНЬ! 🏆\n\n"
+            f"Юля, это невероятно! Ты дошла до конца!\n\n"
+            f"Я так тобой горжусь — ты доказала себе что можешь.\n"
+            f"Не всем это даётся. Но ты — смогла! 🌸\n\n"
+            f"Just20 — это теперь часть тебя. 💕"
+        )
+    else:
+        text = (
+            f"{random.choice(celebrations)}\n\n"
+            f"{random.choice(messages)}\n\n"
+            f"{bar} {pct}%\n"
+            f"День {current_day} ✅ выполнен!\n"
+            f"Осталось дней: {days_left}\n\n"
+            f"Завтра в 9:00 — День {current_day + 1}. Я уже жду! 🌸"
+        )
+
+    msg = update.message if hasattr(update, 'message') and update.message else update.callback_query.message
+    await msg.reply_text(text, parse_mode="Markdown", reply_markup=main_keyboard())
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -413,9 +458,47 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif data == "done":
-        update.message = query.message
-        update.effective_user = query.from_user
-        await process_done(update, context)
+        user_id = query.from_user.id
+        user = get_user(user_id)
+        if not user or not user.get("active"):
+            await query.message.reply_text(MSG_NOT_PAID, reply_markup=payment_keyboard())
+            return
+        current_day = user.get("current_day", 1)
+        days_done = current_day
+        days_left = max(0, 21 - days_done)
+        pct = min(100, int((days_done / 21) * 100))
+        filled = int(pct / 10)
+        bar = "🟣" * filled + "⬜" * (10 - filled)
+        import random
+        celebrations = [
+            "ВОТ ЭТО ДА! 🎉🎉🎉",
+            "УМНИЦА! Я в восторге! 🌟🌟🌟",
+            "ТЫ — ЗВЕЗДА! ⭐⭐⭐",
+            "НЕВЕРОЯТНО! Я так тобой горжусь! 🔥🔥🔥",
+            "БРАВО! Это просто потрясающе! 💫💫💫",
+        ]
+        messages = [
+            "Ты только что сделала что-то важное для себя — и это считается! 💪",
+            "Знаешь что самое крутое? Ты не остановилась. Вот это сила! 🌸",
+            "Твоё тело говорит тебе спасибо прямо сейчас! ✨",
+            "Каждое занятие — инвестиция в себя. И ты только что вложила в себя! 💕",
+            "Я так рада быть рядом с тобой в этом пути! 🌸",
+        ]
+        user["current_day"] = current_day + 1
+        user["last_morning"] = datetime.now(MOSCOW_TZ).date().isoformat()
+        save_user(user_id, user)
+        if current_day >= 21:
+            text = "🏆 ТЫ ПРОШЛА ВСЕ 21 ДЕНЬ! 🏆\n\nЭто невероятно! Ты доказала себе что можешь.\nЯ так тобой горжусь! 🌸💕"
+        else:
+            text = (
+                f"{random.choice(celebrations)}\n\n"
+                f"{random.choice(messages)}\n\n"
+                f"{bar} {pct}%\n"
+                f"День {current_day} ✅ выполнен!\n"
+                f"Осталось: {days_left} дней\n\n"
+                f"Завтра в 9:00 — День {current_day + 1}. Я уже жду! 🌸"
+            )
+        await query.message.reply_text(text, reply_markup=main_keyboard())
 
     elif data == "remind_later":
         await query.message.reply_text(
