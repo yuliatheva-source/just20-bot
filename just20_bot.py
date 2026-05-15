@@ -27,17 +27,32 @@ ADMIN_ID = 8668453654
 SITE_URL = "https://just20.ru"
 MOSCOW_TZ = pytz.timezone("Europe/Moscow")
 
-DB_FILE = "users.json"
+# ── PERSISTENT DATABASE ──
+# Uses a local file with fallback to env variable for Railway
+DB_FILE = "/tmp/users.json"
 
 def load_db():
+    # Try local file first
     if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    # Fallback to environment variable
+    env_data = os.environ.get("USERS_DB", "{}")
+    try:
+        return json.loads(env_data)
+    except:
+        return {}
 
 def save_db(db):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(db, f, ensure_ascii=False, indent=2)
+    # Save to local file
+    try:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(db, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"DB save error: {e}")
 
 def get_user(user_id):
     return load_db().get(str(user_id))
@@ -46,6 +61,35 @@ def save_user(user_id, data):
     db = load_db()
     db[str(user_id)] = data
     save_db(db)
+
+# Pre-activate admin and known users on startup
+def init_db():
+    db = load_db()
+    # Always keep admin active
+    if str(ADMIN_ID) not in db or not db[str(ADMIN_ID)].get("active"):
+        db[str(ADMIN_ID)] = {
+            "active": True,
+            "tariff": "premium",
+            "start_date": datetime.now(MOSCOW_TZ).isoformat(),
+            "current_day": 1,
+            "last_morning": None,
+            "last_lunch": None,
+            "last_dinner": None,
+        }
+    # Always keep Rita's mum active
+    RITA_MUM_ID = 1335108148
+    if str(RITA_MUM_ID) not in db or not db[str(RITA_MUM_ID)].get("active"):
+        db[str(RITA_MUM_ID)] = {
+            "active": True,
+            "tariff": "full",
+            "start_date": datetime.now(MOSCOW_TZ).isoformat(),
+            "current_day": 1,
+            "last_morning": None,
+            "last_lunch": None,
+            "last_dinner": None,
+        }
+    save_db(db)
+    logging.info(f"DB initialized with {len(db)} users")
 
 def activate_user(user_id, tariff="full"):
     user = get_user(user_id) or {}
@@ -708,6 +752,8 @@ def main():
         name="dinner"
     )
 
+    # Initialize database with permanent users
+    init_db()
     print("Just20 Bot v2 запущен! 🌸")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
