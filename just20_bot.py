@@ -289,8 +289,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip().lower()
 
     if user.get("waiting_payment_id"):
+        input_text = update.message.text.strip()
+
+        # Check promo codes first
+        PROMO_CODES = ["RITA2026", "JUST20TEST", "BETA2026"]
+        if input_text.upper() in PROMO_CODES:
+            activate_user(user_id)
+            user["waiting_payment_id"] = False
+            save_user(user_id, user)
+            await update.message.reply_text(
+                "🎁 Промо-код принят! Добро пожаловать в Just20!\n\n" + MSG_ACCESS_GRANTED,
+                reply_markup=main_keyboard()
+            )
+            try:
+                await context.bot.send_message(ADMIN_ID,
+                    f"🎁 Промо-код использован!\nID: {user_id}\nИмя: {update.effective_user.full_name}\nКод: {input_text.upper()}")
+            except:
+                pass
+            return
+
+        # Check YuKassa payment
         await update.message.reply_text("🔍 Проверяю твою оплату...")
-        result = await check_yukassa_payment(update.message.text.strip())
+        result = await check_yukassa_payment(input_text)
         if result["found"] and result["paid"]:
             activate_user(user_id)
             user["waiting_payment_id"] = False
@@ -303,7 +323,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
         else:
             await update.message.reply_text(
-                "Я не нашла этот номер заказа 🔍\n\nПроверь номер — он приходит на email после оплаты. Или напиши мне и разберёмся! 💕",
+                "Я не нашла этот номер заказа и не распознала промо-код 🔍\n\nПроверь номер заказа из письма после оплаты.\nЕсли у тебя есть промо-код — напиши его заглавными буквами. Или напиши мне и разберёмся! 💕",
                 reply_markup=payment_keyboard()
             )
         return
